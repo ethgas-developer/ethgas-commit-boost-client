@@ -1,0 +1,69 @@
+use alloy::primitives::U256;
+use eyre::Result;
+use reqwest::Client;
+use tracing::error;
+use url::Url;
+use crate::{
+    types::Chain,
+    pbs::{BuilderBid, GetHeaderResponse}, 
+    interop::ethgas::types::EthgasAPIWholeblockMarketsResponse
+};
+
+
+pub fn adjust_ethgas_bid_value(res: &mut GetHeaderResponse) {
+    // subtract 11,000 ETH from the bid value for ethgas relays
+    let delta = U256::from(11_000u64) * U256::from(1_000_000_000_000_000_000u128);
+    match &mut res.data.message {
+        BuilderBid::Bellatrix(bid) => bid.value -= delta,
+        BuilderBid::Capella(bid) => bid.value -= delta,
+        BuilderBid::Deneb(bid) => bid.value -= delta,
+        BuilderBid::Electra(bid) => bid.value -= delta,
+        BuilderBid::Fulu(bid) => bid.value -= delta,
+        BuilderBid::Gloas(bid) => bid.value -= delta,
+    }
+}
+
+pub async fn fetch_relay_mode(chain: &Chain, slot: u64) -> Result<u8> {
+    let exchange_base_url = match chain {
+        Chain::Mainnet => "https://mainnet.app.ethgas.com",
+        Chain::Hoodi => "https://hoodi.app.ethgas.com",
+        _ => return Err(std::io::Error::other( "unsupported chain") .into()),
+    };
+    let exchange_api_url = Url::parse(&format!("{}{}", exchange_base_url, "/api/v1/p/wholeblock/markets"))?;
+    let client = Client::new();
+    let res = client
+        .get(exchange_api_url.to_string())
+        .header("User-Agent", "cb_ethgas_pbs")
+        .send()
+        .await?;
+    let relay_mode = match res.json::<EthgasAPIWholeblockMarketsResponse>().await {
+        Ok(result) => match result.success {
+            true => {
+                match result.relay_mode_for_slot(slot) {
+                    Some(relay_mode) => relay_mode,
+                    None => {
+                        return Err(std::io::Error::other(
+                            "relay_mode not found from wholeblock markets API",
+                        )
+                        .into())
+                    }
+                }
+            },
+            false => {
+                return Err(std::io::Error::other(
+                    format!(
+                        "failed to get successful result from wholeblock markets API: {}",
+                        result.error_msg_key.unwrap_or_default()
+                    ),
+                )
+                .into());
+            }
+        },
+        Err(err) => {
+            error!(?err, "failed to call wholeblock markets API");
+            return Err(std::io::Error::other("failed to call wholeblock markets API").into());
+        }
+    };
+
+    Ok(relay_mode)
+}

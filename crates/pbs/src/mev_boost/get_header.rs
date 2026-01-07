@@ -22,6 +22,9 @@ use cb_common::{
         get_user_agent_with_version, ms_into_slot, read_chunked_body_with_max,
         timestamp_of_slot_start_sec, utcnow_ms,
     },
+    interop::ethgas::{
+        constants::{ETHGAS_RELAY_MODE, MULTI_RELAY_MODE}, utils::{adjust_ethgas_bid_value, fetch_relay_mode}
+    }
 };
 use futures::future::join_all;
 use parking_lot::RwLock;
@@ -118,19 +121,30 @@ pub async fn get_header<S: BuilderApiState>(
         );
     }
 
+    let relay_mode = fetch_relay_mode(
+        &state.config.chain,
+        params.slot,
+    ).await?;
+
     let results = join_all(handles).await;
     let mut relay_bids = Vec::with_capacity(relays.len());
     for (i, res) in results.into_iter().enumerate() {
         let relay_id = relays[i].id.as_str();
+        if relay_mode == ETHGAS_RELAY_MODE && !relay_id.contains("ethgas") {
+            continue;
+        }
 
         match res {
-            Ok(Some(res)) => {
+            Ok(Some(mut res)) => {
                 RELAY_LAST_SLOT.with_label_values(&[relay_id]).set(params.slot as i64);
                 let value_gwei = (res.data.message.value() / U256::from(1_000_000_000))
                     .try_into()
                     .unwrap_or_default();
                 RELAY_HEADER_VALUE.with_label_values(&[relay_id]).set(value_gwei);
 
+                if relay_mode == MULTI_RELAY_MODE && relay_id.contains("ethgas") {
+                    adjust_ethgas_bid_value(&mut res);
+                }
                 relay_bids.push(res)
             }
             Ok(_) => {}
