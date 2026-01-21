@@ -23,27 +23,27 @@ pub fn adjust_ethgas_bid_value(res: &mut GetHeaderResponse) {
     }
 }
 
-pub async fn fetch_relay_mode(chain: &Chain, slot: u64) -> Result<u8> {
+pub async fn fetch_is_multi_relay(chain: &Chain, slot: u64) -> Result<bool> {
     let exchange_base_url = match chain {
         Chain::Mainnet => "https://mainnet.app.ethgas.com",
         Chain::Hoodi => "https://hoodi.app.ethgas.com",
         _ => return Err(std::io::Error::other( "unsupported chain") .into()),
     };
-    let exchange_api_url = Url::parse(&format!("{}{}", exchange_base_url, "/api/v1/p/wholeblock/markets"))?;
+    let exchange_api_url = Url::parse(&format!("{}{}{}", exchange_base_url, "/api/v1/p/wholeblock/market?slot=", slot))?;
     let client = Client::new();
     let res = client
         .get(exchange_api_url.to_string())
         .header("User-Agent", "cb_ethgas_pbs")
         .send()
         .await?;
-    let relay_mode = match res.json::<EthgasAPIWholeblockMarketsResponse>().await {
+    let is_multi_relay = match res.json::<EthgasAPIWholeblockMarketsResponse>().await {
         Ok(result) => match result.success {
             true => {
-                match result.relay_mode_for_slot(slot) {
-                    Some(relay_mode) => relay_mode,
+                match result.is_multi_relay_for_slot(slot) {
+                    Some(is_multi_relay) => is_multi_relay,
                     None => {
                         return Err(std::io::Error::other(
-                            "relay_mode not found from wholeblock markets API",
+                            "multi_relay not found from wholeblock markets API",
                         )
                         .into())
                     }
@@ -65,5 +65,5 @@ pub async fn fetch_relay_mode(chain: &Chain, slot: u64) -> Result<u8> {
         }
     };
 
-    Ok(relay_mode)
+    Ok(is_multi_relay)
 }

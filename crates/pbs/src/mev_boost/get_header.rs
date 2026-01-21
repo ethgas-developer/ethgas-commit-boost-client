@@ -23,7 +23,7 @@ use cb_common::{
         timestamp_of_slot_start_sec, utcnow_ms,
     },
     interop::ethgas::{
-        constants::{ETHGAS_RELAY_MODE, MULTI_RELAY_MODE}, utils::{adjust_ethgas_bid_value, fetch_relay_mode}
+        utils::{adjust_ethgas_bid_value, fetch_is_multi_relay}
     }
 };
 use futures::future::join_all;
@@ -121,7 +121,7 @@ pub async fn get_header<S: BuilderApiState>(
         );
     }
 
-    let relay_mode = fetch_relay_mode(
+    let is_multi_relay = fetch_is_multi_relay(
         &state.config.chain,
         params.slot,
     ).await?;
@@ -130,7 +130,7 @@ pub async fn get_header<S: BuilderApiState>(
     let mut relay_bids = Vec::with_capacity(relays.len());
     for (i, res) in results.into_iter().enumerate() {
         let relay_id = relays[i].id.as_str();
-        if relay_mode == ETHGAS_RELAY_MODE && !relay_id.contains("ethgas") {
+        if is_multi_relay == false && !relay_id.contains("ethgas") {
             continue;
         }
 
@@ -142,7 +142,7 @@ pub async fn get_header<S: BuilderApiState>(
                     .unwrap_or_default();
                 RELAY_HEADER_VALUE.with_label_values(&[relay_id]).set(value_gwei);
 
-                if relay_mode == MULTI_RELAY_MODE && relay_id.contains("ethgas") {
+                if is_multi_relay == true && relay_id.contains("ethgas") {
                     adjust_ethgas_bid_value(&mut res);
                 }
                 relay_bids.push(res)

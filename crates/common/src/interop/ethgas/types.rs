@@ -9,8 +9,8 @@ pub struct EthgasAPIWholeblockMarketsResponse {
 
 impl EthgasAPIWholeblockMarketsResponse {
 
-    pub fn relay_mode_for_slot(&self, slot: u64) -> Option<u8> {
-        self.data.relay_mode_for_slot(slot)
+    pub fn is_multi_relay_for_slot(&self, slot: u64) -> Option<bool> {
+        self.data.is_multi_relay_for_slot(slot)
     }
 }
 
@@ -21,11 +21,11 @@ pub struct EthgasAPIWholeblockMarketsResponseData {
 }
 
 impl EthgasAPIWholeblockMarketsResponseData {
-    fn relay_mode_for_slot(&self, slot: u64) -> Option<u8> {
+    fn is_multi_relay_for_slot(&self, slot: u64) -> Option<bool> {
         self.markets
             .iter()
             .find(|market| market.slot == slot)
-            .map(|market| market.relay_mode)
+            .map(|market| market.multi_relay)
     }
 }
 
@@ -33,5 +33,5 @@ impl EthgasAPIWholeblockMarketsResponseData {
 #[serde(rename_all = "camelCase")]
 pub struct WholeblockMarket {
     slot: u64,
-    relay_mode: u8,
+    multi_relay: bool,
 }
