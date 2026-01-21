@@ -1,4 +1,4 @@
-name: Build and Push ethgas_commit and related images
+name: Build and Push ethgas_pbs
 
 on:
   push:
@@ -13,6 +13,6 @@ jobs:
     uses: ./.github/workflows/ethgas-base.yml
     with:
       image_name: commitboost_ethgas_pbs
-      dockerfile: provisioning/pbs.Dockerfile
+      dockerfile: provisioning/pbs.ethgas.Dockerfile
     secrets:
       GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
