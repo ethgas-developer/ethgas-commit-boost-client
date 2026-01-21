@@ -9,7 +9,7 @@ on:
       - crates/common/src/interop/*
 
 jobs:
-  build-ethgas-commit:
+  build-ethgas-pbs:
     uses: ./.github/workflows/ethgas-base.yml
     with:
       image_name: commitboost_ethgas_pbs
