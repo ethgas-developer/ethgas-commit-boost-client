@@ -1,5 +1,8 @@
-FROM lukemathwalker/cargo-chef:latest-rust-1 AS chef
+FROM --platform=${BUILDPLATFORM} rust:1.89-slim-bookworm AS chef
 WORKDIR /app
+ENV CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
+RUN cargo install cargo-chef --locked && \
+  rm -rf $CARGO_HOME/registry/
 
 FROM chef AS planner
 COPY . .
@@ -8,7 +11,11 @@ RUN cargo chef prepare --recipe-path recipe.json
 FROM chef AS builder 
 COPY --from=planner /app/recipe.json recipe.json
 
-RUN apt-get update && apt-get install -y protobuf-compiler
+RUN apt-get update && apt-get install -y \
+  protobuf-compiler \
+  perl \
+  make \
+  git
 
 RUN cargo chef cook --release --recipe-path recipe.json
 
@@ -35,5 +42,3 @@ RUN groupadd -g 10001 commitboost && \
 USER commitboost
 
 ENTRYPOINT ["/usr/local/bin/commit-boost-pbs"]
-
-
