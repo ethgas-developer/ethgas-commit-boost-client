@@ -1,8 +1,5 @@
-FROM --platform=${BUILDPLATFORM} rust:1.89-slim-bookworm AS chef
+FROM lukemathwalker/cargo-chef:latest-rust-1.89-bookworm AS chef
 WORKDIR /app
-ENV CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
-RUN cargo install cargo-chef --locked && \
-  rm -rf $CARGO_HOME/registry/
 
 FROM chef AS planner
 COPY . .
@@ -23,7 +20,7 @@ COPY . .
 RUN cargo build --release --bin commit-boost-pbs
 
 
-FROM debian:trixie-20240904-slim AS runtime
+FROM debian:bookworm-slim AS runtime
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y \
