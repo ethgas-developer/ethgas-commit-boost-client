@@ -1,7 +1,7 @@
 use alloy::primitives::U256;
 use eyre::Result;
 use reqwest::Client;
-use tracing::error;
+use tracing::{error, debug};
 use url::Url;
 use crate::{
     types::Chain,
@@ -64,6 +64,7 @@ pub async fn fetch_is_multi_relay(chain: &Chain, slot: u64) -> Result<bool> {
             return Err(std::io::Error::other("failed to call wholeblock markets API").into());
         }
     };
+    debug!(slot, is_multi_relay);
 
     Ok(is_multi_relay)
 }
