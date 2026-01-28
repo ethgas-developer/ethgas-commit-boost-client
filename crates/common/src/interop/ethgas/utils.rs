@@ -64,7 +64,7 @@ pub async fn fetch_is_multi_relay(chain: &Chain, slot: u64) -> Result<bool> {
             return Err(std::io::Error::other("failed to call wholeblock markets API").into());
         }
     };
-    debug!(slot, is_multi_relay);
+    debug!(is_multi_relay, "ethgas wholeblock markets API");
 
     Ok(is_multi_relay)
 }
