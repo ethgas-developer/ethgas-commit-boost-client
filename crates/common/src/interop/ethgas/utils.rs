@@ -42,26 +42,22 @@ pub async fn fetch_is_multi_relay(chain: &Chain, slot: u64) -> Result<bool> {
                 match result.is_multi_relay_for_slot(slot) {
                     Some(is_multi_relay) => is_multi_relay,
                     None => {
-                        return Err(std::io::Error::other(
-                            "multi_relay not found from wholeblock markets API",
-                        )
-                        .into())
+                        error!("multi_relay not found from wholeblock markets API");
+                        return Ok(true)
                     }
                 }
             },
             false => {
-                return Err(std::io::Error::other(
-                    format!(
-                        "failed to get successful result from wholeblock markets API: {}",
-                        result.error_msg_key.unwrap_or_default()
-                    ),
-                )
-                .into());
+                error!(
+                    "failed to get successful result from wholeblock markets API: {}",
+                    result.error_msg_key.unwrap_or_default()
+                );
+                return Ok(true)
             }
         },
         Err(err) => {
             error!(?err, "failed to call wholeblock markets API");
-            return Err(std::io::Error::other("failed to call wholeblock markets API").into());
+            return Ok(true)
         }
     };
     debug!(is_multi_relay, "ethgas wholeblock markets API");
