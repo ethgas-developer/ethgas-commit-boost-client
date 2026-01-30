@@ -42,21 +42,21 @@ pub async fn fetch_is_multi_relay(chain: &Chain, slot: u64) -> Result<bool> {
                 match result.is_multi_relay_for_slot(slot) {
                     Some(is_multi_relay) => is_multi_relay,
                     None => {
-                        error!("multi_relay not found from wholeblock markets API");
+                        error!("multi_relay not found from wholeblock markets API, is_multi_relay is set to true by default");
                         return Ok(true)
                     }
                 }
             },
             false => {
                 error!(
-                    "failed to get successful result from wholeblock markets API: {}",
+                    "failed to get successful result from wholeblock markets API: {}, is_multi_relay is set to true by default",
                     result.error_msg_key.unwrap_or_default()
                 );
                 return Ok(true)
             }
         },
         Err(err) => {
-            error!(?err, "failed to call wholeblock markets API");
+            error!(?err, "failed to call wholeblock markets API, is_multi_relay is set to true by default");
             return Ok(true)
         }
     };
