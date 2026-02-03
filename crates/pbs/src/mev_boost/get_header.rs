@@ -23,7 +23,7 @@ use cb_common::{
         timestamp_of_slot_start_sec, utcnow_ms,
     },
     interop::ethgas::{
-        utils::{adjust_ethgas_bid_value, fetch_is_multi_relay}
+        utils::{adjust_ethgas_bid_value, fetch_is_multi_relay, restore_ethgas_bid_value}
     }
 };
 use futures::future::join_all;
@@ -142,10 +142,11 @@ pub async fn get_header<S: BuilderApiState>(
                     .unwrap_or_default();
                 RELAY_HEADER_VALUE.with_label_values(&[relay_id]).set(value_gwei);
 
-                if is_multi_relay == true && relay_id.contains("ethgas") {
+                let is_ethgas_relay = relay_id.contains("ethgas");
+                if is_multi_relay == true && is_ethgas_relay {
                     adjust_ethgas_bid_value(&mut res);
                 }
-                relay_bids.push(res)
+                relay_bids.push((is_ethgas_relay, res))
             }
             Ok(_) => {}
             Err(err) if err.is_timeout() => error!(err = "Timed Out", relay_id),
@@ -153,7 +154,15 @@ pub async fn get_header<S: BuilderApiState>(
         }
     }
 
-    let max_bid = relay_bids.into_iter().max_by_key(|bid| *bid.value());
+    let max_bid = relay_bids
+        .into_iter()
+        .max_by_key(|(_, bid)| *bid.value())
+        .map(|(is_ethgas_relay, mut bid)| {
+            if is_multi_relay == true && is_ethgas_relay {
+                restore_ethgas_bid_value(&mut bid);
+            }
+            bid
+        });
 
     Ok(max_bid)
 }

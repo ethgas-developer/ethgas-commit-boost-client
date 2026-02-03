@@ -23,6 +23,18 @@ pub fn adjust_ethgas_bid_value(res: &mut GetHeaderResponse) {
     }
 }
 
+pub fn restore_ethgas_bid_value(res: &mut GetHeaderResponse) {
+    let delta = U256::from(11_000u64) * U256::from(1_000_000_000_000_000_000u128);
+    match &mut res.data.message {
+        BuilderBid::Bellatrix(bid) => bid.value += delta,
+        BuilderBid::Capella(bid) => bid.value += delta,
+        BuilderBid::Deneb(bid) => bid.value += delta,
+        BuilderBid::Electra(bid) => bid.value += delta,
+        BuilderBid::Fulu(bid) => bid.value += delta,
+        BuilderBid::Gloas(bid) => bid.value += delta,
+    }
+}
+
 pub async fn fetch_is_multi_relay(chain: &Chain, slot: u64) -> Result<bool> {
     let exchange_base_url = match chain {
         Chain::Mainnet => "https://mainnet.app.ethgas.com",
