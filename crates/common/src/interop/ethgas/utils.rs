@@ -51,6 +51,10 @@ pub async fn fetch_is_multi_relay(chain: &Chain, slot: u64) -> Result<bool> {
     let is_multi_relay = match res.json::<EthgasAPIWholeblockMarketsResponse>().await {
         Ok(result) => match result.success {
             true => {
+                if result.markets_is_empty() {
+                    debug!("not ethgas slot, is_multi_relay is set to true");
+                    return Ok(true)
+                }
                 match result.is_multi_relay_for_slot(slot) {
                     Some(is_multi_relay) => is_multi_relay,
                     None => {
